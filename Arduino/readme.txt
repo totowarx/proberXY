@@ -2,7 +2,15 @@
 //////////////////Mardi 31 Mars///////////////////
 --------------------------------------------------
 
-Explication fichier :
+Explication fichiers :
+---------------------
+communicationSerie1.0 est un programme qui va me permettre d'effectuer des actions sur la platine juste en envoyant des commandes via le port série.
+
+/-------------------------------------------------
+//////////////////Mardi 31 Mars///////////////////
+--------------------------------------------------
+
+Explication fichiers :
 ---------------------
 PilotageMoteurSimultane2.0 est un programme qui va me permettre de déplacer la platine jusqu'a se qu'elle percute les capteurs de fin de course. Cela va permettre de définir le zéro "mécanique" de la platine. Tout cela avec déplacement simultané.
 
@@ -14,7 +22,7 @@ PilotageMoteurSimultane1.0 est un programme qui m'a permis de faire des tests de
 
 Fichier à utiliser : lectureCapteurRLS_v1onMKS
 
-Explication fichier :
+Explication fichiers :
 ---------------------
 
 lectureCapteurRLS_88bits est un essai car la communication SPI se faisait sur 44 bits et ça n'allait pas
