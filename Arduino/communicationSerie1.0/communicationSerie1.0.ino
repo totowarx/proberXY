@@ -70,8 +70,10 @@ void setup() {
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE1);
   
-  goZeroTouchSensor();
-  goMaxTouchSensor();
+  //goZeroTouchSensor();
+  //goMaxTouchSensor();
+  offset1 = 6001738.50;
+  offset2 = 5745582.50;
 
   help();
   ready();
@@ -98,9 +100,9 @@ void help() {
   
   Serial.println("Position :");
   Serial.println("----------");
-  Serial.println(F("GCP X - get current position X"));
-  Serial.println(F("GCP Y - get current position Y"));
-  Serial.println(F("GCP X Y - get current position X and Y"));
+  Serial.println(F("GCP1 X - get current position X"));
+  Serial.println(F("GCP1 Y - get current position Y"));
+  Serial.println(F("GCP2 X Y - get current position X and Y"));
   Serial.println("");
 }
 
@@ -158,6 +160,19 @@ void processCommand(){
         motionControl(valeurObjectif_Y, offset2, chipSelectPin2, PIN_STEP_2, PIN_DIR_2);
       }
     }
+    if(buffer_String.substring(2,3)=="2"){
+      Serial.println("2 axe");
+      
+      absolute_Value_String = buffer_String.substring(5,11);
+      valeurObjectif_X = (absolute_Value_String.toInt());
+      Serial.println(valeurObjectif_X);
+
+      absolute_Value_String = buffer_String.substring(13,19);
+      valeurObjectif_Y = (absolute_Value_String.toInt());
+      Serial.println(valeurObjectif_Y);
+
+      dualMotionControl(valeurObjectif_X, valeurObjectif_Y, offset1, offset2);
+    }
   }
 
   if(buffer_String.substring(0,2) == "MR")
@@ -192,6 +207,29 @@ void processCommand(){
           xy_move(0,true,nbPasY_Objectif,false);
         }
       }
+    }
+  }
+
+  if(buffer_String.substring(0,3) == "GCP")
+  {
+    Serial.println("Get Current Position");
+    if(buffer_String.substring(3,4) == "1"){
+      Serial.println("1 axe");
+      if(buffer_String.substring(5,6) == "X"){
+        Serial.println("X");
+        Serial.println(lectureCapteurRLS(chipSelectPin1)-offset1);
+      }
+      if(buffer_String.substring(5,6) == "Y"){
+        Serial.println("Y");
+        Serial.println(lectureCapteurRLS(chipSelectPin2)-offset2);
+      }
+    }
+    if(buffer_String.substring(3,8) == "2 X Y"){
+      Serial.println("2 axe");
+      Serial.println("X");
+      Serial.println(lectureCapteurRLS(chipSelectPin1)-offset1);
+      Serial.println("Y");
+      Serial.println(lectureCapteurRLS(chipSelectPin2)-offset2);
     }
   }
 }
@@ -277,7 +315,7 @@ void xy_move(int nbPas1, bool dir1, int nbPas2, bool dir2){
 
 void motionControl(double valeurObjectif, double offset, int chipSelectPin, int PIN_STEP, int PIN_DIR ){
   
-  float valeurRLS=0;
+  double valeurRLS=0;
   
   delay(10);
   valeurRLS = lectureCapteurRLS(chipSelectPin);
@@ -286,7 +324,7 @@ void motionControl(double valeurObjectif, double offset, int chipSelectPin, int 
   if(valeurRLS<valeurObjectif){
     //Serial.println("OPTION1");
     digitalWrite(PIN_DIR, LOW);
-    while(valeurRLS<(valeurObjectif-2)){
+    while(valeurRLS<(valeurObjectif)){
       valeurRLS =lectureCapteurRLS(chipSelectPin);
       //Serial.print(valeurRLS);
       //Serial.print(" compared to : ");
@@ -301,7 +339,7 @@ void motionControl(double valeurObjectif, double offset, int chipSelectPin, int 
   else{
     //Serial.println("OPTION2");
     digitalWrite(PIN_DIR, HIGH);
-    while(valeurRLS>(valeurObjectif+2)){
+    while(valeurRLS>(valeurObjectif)){
       valeurRLS =lectureCapteurRLS(chipSelectPin);
       //Serial.print(valeurRLS);
       //Serial.print(" compared to : ");
@@ -314,7 +352,292 @@ void motionControl(double valeurObjectif, double offset, int chipSelectPin, int 
     }
   }
 }
+void dualMotionControl(double valeurObjectifX, double valeurObjectifY, double offsetX, double offsetY){
+  /*
+    La fonction dualMotionControl permet le contrôle des deux moteurs en pseudo-parallèle
+    La fonction prend en entrée : 
+      - valeurObjectifX : La valeur à atteindre en X
+      - valeurObjectifY : La valeur à atteindre en Y
+      - offsetX : La valeur minimale de la règle magnétique en X
+      - offsetY : La valeur minimale de la règle magnétique en Y
+  */
 
+  double valeurRLS_X=0;
+  double valeurRLS_Y=0;
+
+  bool doneX = false;
+  bool doneY = false;
+
+  bool step_state_x = false;
+  bool step_state_y = false;
+
+  bool dir_state_x = false;
+  bool dir_state_y = false;
+
+  valeurRLS_X = lectureCapteurRLS(chipSelectPin1);
+  valeurRLS_Y = lectureCapteurRLS(chipSelectPin2);
+
+  valeurObjectifX += offsetX;
+  valeurObjectifY += offsetY;
+
+  unsigned long currentMicros = micros();
+
+  if(valeurRLS_X < valeurObjectifX){
+    Serial.println("Direction vers moteur");
+    dir_state_x = false;
+    Serial.println("L'instruction stoppante sera : valeurRLS_X > valeurObjectifX");
+  }
+  else{
+    Serial.println("Direction pas vers moteur");
+    dir_state_x = true;
+    Serial.println("L'instruction stoppante sera : valeurRLS_X > valeurObjectifX");
+  }
+  digitalWrite(PIN_DIR_1, dir_state_x); 
+
+  if(valeurRLS_Y < valeurObjectifY){
+    Serial.println("Direction vers moteur");
+    dir_state_y = false;
+    Serial.println("L'instruction stoppante sera : valeurRLS_Y > valeurObjectifY");
+  }
+  else{
+    Serial.println("Direction pas vers moteur");
+    dir_state_y = true;
+    Serial.println("L'instruction stoppante sera : valeurRLS_Y > valeurObjectifY");
+  }
+  digitalWrite(PIN_DIR_2, dir_state_y); 
+
+  
+  while((doneY&&doneX)==false){
+    valeurRLS_X = lectureCapteurRLS(chipSelectPin1);
+    valeurRLS_Y = lectureCapteurRLS(chipSelectPin2);
+    
+    currentMicros = micros();
+    if(doneX == false){
+      if(dir_state_x == false){
+        
+        Serial.print(valeurRLS_X);
+        Serial.print(" > ");
+        Serial.println(valeurObjectifX);
+        
+        
+        if(valeurRLS_X >= valeurObjectifX){
+          doneX = true;
+          Serial.println("doneX");
+        }
+      }
+      if(dir_state_x == true){
+      
+        
+        Serial.print(valeurRLS_X);
+        Serial.print(" < ");
+        Serial.println(valeurObjectifX);
+        
+        
+        if(valeurRLS_X <= valeurObjectifX){
+          doneX = true;
+          Serial.println("doneX");
+        }
+      }
+      
+      if(step_state_x == LOW){
+        if((currentMicros - previousMicros1)>=T_OFF_1){
+          step_state_x = HIGH;
+          digitalWrite(PIN_STEP_1, step_state_x);
+        }
+      }
+      else{
+        if((currentMicros - previousMicros1)>=T_ON_1){
+          step_state_x = LOW;
+          previousMicros1 = currentMicros;
+          digitalWrite(PIN_STEP_1, step_state_x);
+        }
+      }
+    }
+    
+    if(doneY == false){
+      if(dir_state_y == false){
+        
+        Serial.print(valeurRLS_Y);
+        Serial.print(" > ");
+        Serial.println(valeurObjectifY);
+        
+        
+        if(valeurRLS_Y >= valeurObjectifY){
+          doneY = true;
+          Serial.println("doneY");
+        }
+      }
+      if(dir_state_y == true){
+      
+        
+        Serial.print(valeurRLS_Y);
+        Serial.print(" < ");
+        Serial.println(valeurObjectifY);
+        
+        
+        if(valeurRLS_Y <= valeurObjectifY){
+          doneY = true;
+          Serial.println("doneY");
+        }
+      }
+      
+      if(step_state_y == LOW){
+        if((currentMicros - previousMicros2)>=T_OFF_2){
+          step_state_y = HIGH;
+          digitalWrite(PIN_STEP_2, step_state_y);
+        }
+      }
+      else{
+        if((currentMicros - previousMicros2)>=T_ON_2){
+          step_state_y = LOW;
+          previousMicros2 = currentMicros;
+          digitalWrite(PIN_STEP_2, step_state_y);
+        }
+      }
+    }
+  }
+}
+void dualMotionControl2(double valeurObjectifX, double valeurObjectifY, double offsetX, double offsetY){
+  /*
+    La fonction dualMotionControl permet le contrôle des deux moteurs en pseudo-parallèle
+    La fonction prend en entrée : 
+      - valeurObjectifX : La valeur à atteindre en X
+      - valeurObjectifY : La valeur à atteindre en Y
+      - offsetX : La valeur minimale de la règle magnétique en X
+      - offsetY : La valeur minimale de la règle magnétique en Y
+  */
+
+  double valeurRLS_X=0;
+  double valeurRLS_Y=0;
+
+  bool doneX = false;
+  bool doneY = false;
+
+  bool step_state_x = false;
+  bool step_state_y = false;
+
+  bool dir_state_x = false;
+  bool dir_state_y = false;
+
+  valeurRLS_X = lectureCapteurRLS(chipSelectPin1);
+  valeurRLS_Y = lectureCapteurRLS(chipSelectPin2);
+
+  valeurObjectifX += offsetX;
+  valeurObjectifY += offsetY;
+
+  unsigned long currentMicros = micros();
+
+  Serial.print(valeurRLS_X);
+  Serial.print("<");
+  Serial.println(valeurObjectifX);
+  
+  if(valeurRLS_X < valeurObjectifX){
+    dir_state_x = LOW;
+    Serial.println("Axe x vers moteur");
+  }
+  else{
+    dir_state_x = HIGH;
+    Serial.println("Axe x pas vers moteur");
+  }
+  Serial.print("dir_state_x:");
+  Serial.println(dir_state_x);
+  
+  digitalWrite(PIN_DIR_1,dir_state_x);
+  
+  if(valeurRLS_Y < valeurObjectifY){
+    dir_state_y = LOW;
+  }
+  else{
+    dir_state_y = HIGH;
+  }
+  Serial.print("dir_state_y:");
+  Serial.println(dir_state_y);
+  digitalWrite(PIN_DIR_2, dir_state_y);
+  
+
+  while((doneX && doneY) == false){
+    currentMicros = micros();
+
+    if(doneX == false){
+      valeurRLS_X = lectureCapteurRLS(chipSelectPin1);
+
+      /*
+      Serial.print(valeurRLS_X);
+      if(dir_state_x == LOW){
+        Serial.print(">");
+      }
+      if(dir_state_x == HIGH){
+        Serial.print("<");
+      }
+      Serial.println(valeurObjectifX);
+      */
+      
+      if ((valeurRLS_X>valeurObjectifX)&&(dir_state_x == LOW)){
+        doneX = true;
+        Serial.println("doneX A");
+      }
+      if ((valeurRLS_X<valeurObjectifX)&&(dir_state_x == HIGH)){
+        doneX = true;
+        Serial.println("doneX B");
+      }
+      if(doneX == false){
+        if(step_state_x == LOW){
+          if((currentMicros - previousMicros1)>=T_OFF_1){
+            step_state_x = HIGH;
+            digitalWrite(PIN_STEP_1, step_state_x);
+          }
+        }
+        else{
+          if((currentMicros - previousMicros1)>=T_ON_1){
+            step_state_x = LOW;
+            previousMicros1 = currentMicros;
+            digitalWrite(PIN_STEP_1, step_state_x);
+          }
+        }
+      }
+    }
+    //doneY = true;
+    
+    if(doneY == false){
+      valeurRLS_Y = lectureCapteurRLS(chipSelectPin2);
+      /*
+      Serial.print(valeurRLS_Y);
+      if(dir_state_y == LOW){
+        Serial.print(">");
+      }
+      if(dir_state_y == HIGH){
+        Serial.print("<");
+      }
+      Serial.println(valeurObjectifY);
+      */
+      
+      if ((valeurRLS_Y>valeurObjectifY)&&(dir_state_y == LOW)){
+        doneY = true;
+        Serial.println("doneY A");
+      }
+      if ((valeurRLS_Y<valeurObjectifY)&&(dir_state_y == HIGH)){
+        doneY = true;
+        Serial.println("doneY B");
+      }
+      
+      if(doneY==false){
+        if(step_state_y == LOW){
+          if((currentMicros - previousMicros2)>=T_OFF_2){
+            step_state_y = HIGH;
+            digitalWrite(PIN_STEP_2, step_state_y);
+          }
+        }
+        else{
+          if((currentMicros - previousMicros2)>=T_ON_2){
+            step_state_y = LOW;
+            previousMicros2 = currentMicros;
+            digitalWrite(PIN_STEP_2, step_state_y);
+          }
+        }
+      }
+    }
+  } 
+}
 double lectureCapteurRLS(char cs_Pin){
   //uint8_t CRC;
   //uint8_t DetailedStatus;
