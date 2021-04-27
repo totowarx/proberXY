@@ -75,7 +75,7 @@ void setup() {
   offset1 = 6001738.50;
   offset2 = 5745582.50;
 
-  help();
+  //help();
   ready();
 }
 
@@ -115,13 +115,13 @@ void ready(){
 void loop() {
   if(Serial.available()){
     char c = Serial.read();
-    Serial.print(c);
+    //Serial.print(c);
     if(index_buffer < MAX_BUF){
       buffer[index_buffer] = c;
       index_buffer++;
     }
     if(c=='\n'){
-      Serial.print(F("\r\n"));
+      //Serial.print(F("\r\n"));
 
       buffer[index_buffer] = 0;
       processCommand();
@@ -130,8 +130,91 @@ void loop() {
   }
 }
 
-
 void processCommand(){
+  String buffer_String = buffer;
+  String absolute_Value_String;
+  double absolute_Value_Int;
+  double valeurObjectif_X = 0;
+  double valeurObjectif_Y = 0;
+  int nbPasX_Objectif = 0;
+  int nbPasY_Objectif = 0;
+  
+  if(buffer_String.substring(0,2) == "MA")
+  {
+    if(buffer_String.substring(2,3)=="1"){
+      if(buffer_String.substring(4,5)=="X"){
+        absolute_Value_String = buffer_String.substring(5,11);
+        valeurObjectif_X = (absolute_Value_String.toInt());
+        motionControl(valeurObjectif_X, offset1, chipSelectPin1, PIN_STEP_1, PIN_DIR_1);
+      }
+      if(buffer_String.substring(4,5)=="Y"){
+        Serial.println("Y:");
+        absolute_Value_String = buffer_String.substring(5,11);
+        valeurObjectif_Y = (absolute_Value_String.toInt());
+        motionControl(valeurObjectif_Y, offset2, chipSelectPin2, PIN_STEP_2, PIN_DIR_2);
+      }
+    }
+    if(buffer_String.substring(2,3)=="2"){
+      
+      absolute_Value_String = buffer_String.substring(5,11);
+      valeurObjectif_X = (absolute_Value_String.toInt());
+      //Serial.println(valeurObjectif_X);  
+
+      absolute_Value_String = buffer_String.substring(13,19);
+      valeurObjectif_Y = (absolute_Value_String.toInt());
+      //Serial.println(valeurObjectif_Y);  
+
+      dualMotionControl(valeurObjectif_X, valeurObjectif_Y, offset1, offset2);
+    }
+  }
+
+  if(buffer_String.substring(0,2) == "MR")
+  {
+    if(buffer_String.substring(2,3)=="1"){
+      if(buffer_String.substring(4,5)=="X"){
+        absolute_Value_String = buffer_String.substring(7,12);
+        nbPasX_Objectif = (absolute_Value_String.toInt());
+        if(buffer_String.substring(5,6)=="+"){
+          xy_move(nbPasX_Objectif,true,0,true);
+        }
+        if(buffer_String.substring(5,6)=="-"){
+          xy_move(nbPasX_Objectif,false,0,true);
+        }
+      }
+      if(buffer_String.substring(4,5)=="Y"){
+        absolute_Value_String = buffer_String.substring(7,12);
+        nbPasY_Objectif = (absolute_Value_String.toInt());
+        if(buffer_String.substring(5,6)=="+"){
+          xy_move(0,true,nbPasY_Objectif,true);
+        }
+        if(buffer_String.substring(5,6)=="-"){
+          xy_move(0,true,nbPasY_Objectif,false);
+        }
+      }
+    }
+  }
+
+  if(buffer_String.substring(0,3) == "GCP")
+  {
+    if(buffer_String.substring(3,4) == "1"){
+      if(buffer_String.substring(5,6) == "X"){
+        Serial.print("X:");
+        Serial.println(lectureCapteurRLS(chipSelectPin1)-offset1);
+      }
+      if(buffer_String.substring(5,6) == "Y"){
+        Serial.print("Y:");
+        Serial.println(lectureCapteurRLS(chipSelectPin2)-offset2);
+      }
+    }
+    if(buffer_String.substring(3,8) == "2 X Y"){
+      Serial.print("X:");
+      Serial.println(lectureCapteurRLS(chipSelectPin1)-offset1);
+      Serial.print("Y:");
+      Serial.println(lectureCapteurRLS(chipSelectPin2)-offset2);
+    }
+  }
+}
+void processCommand2(){
   String buffer_String = buffer;
   String absolute_Value_String;
   double absolute_Value_Int;
@@ -383,26 +466,26 @@ void dualMotionControl(double valeurObjectifX, double valeurObjectifY, double of
   unsigned long currentMicros = micros();
 
   if(valeurRLS_X < valeurObjectifX){
-    Serial.println("Direction vers moteur");
+    //Serial.println("Direction vers moteur");
     dir_state_x = false;
-    Serial.println("L'instruction stoppante sera : valeurRLS_X > valeurObjectifX");
+    //Serial.println("L'instruction stoppante sera : valeurRLS_X > valeurObjectifX");
   }
   else{
-    Serial.println("Direction pas vers moteur");
+    //Serial.println("Direction pas vers moteur");
     dir_state_x = true;
-    Serial.println("L'instruction stoppante sera : valeurRLS_X > valeurObjectifX");
+    //Serial.println("L'instruction stoppante sera : valeurRLS_X > valeurObjectifX");
   }
   digitalWrite(PIN_DIR_1, dir_state_x); 
 
   if(valeurRLS_Y < valeurObjectifY){
-    Serial.println("Direction vers moteur");
+    //Serial.println("Direction vers moteur");
     dir_state_y = false;
-    Serial.println("L'instruction stoppante sera : valeurRLS_Y > valeurObjectifY");
+    //Serial.println("L'instruction stoppante sera : valeurRLS_Y > valeurObjectifY");
   }
   else{
-    Serial.println("Direction pas vers moteur");
+    //Serial.println("Direction pas vers moteur");
     dir_state_y = true;
-    Serial.println("L'instruction stoppante sera : valeurRLS_Y > valeurObjectifY");
+    //Serial.println("L'instruction stoppante sera : valeurRLS_Y > valeurObjectifY");
   }
   digitalWrite(PIN_DIR_2, dir_state_y); 
 
@@ -415,27 +498,27 @@ void dualMotionControl(double valeurObjectifX, double valeurObjectifY, double of
     if(doneX == false){
       if(dir_state_x == false){
         
-        Serial.print(valeurRLS_X);
-        Serial.print(" > ");
-        Serial.println(valeurObjectifX);
+        //Serial.print(valeurRLS_X);
+        //Serial.print(" > ");
+        //Serial.println(valeurObjectifX);
         
         
         if(valeurRLS_X >= valeurObjectifX){
           doneX = true;
-          Serial.println("doneX");
+          //Serial.println("doneX");
         }
       }
       if(dir_state_x == true){
       
         
-        Serial.print(valeurRLS_X);
-        Serial.print(" < ");
-        Serial.println(valeurObjectifX);
+        //Serial.print(valeurRLS_X);
+        //Serial.print(" < ");
+        //Serial.println(valeurObjectifX);
         
         
         if(valeurRLS_X <= valeurObjectifX){
           doneX = true;
-          Serial.println("doneX");
+          //Serial.println("doneX");
         }
       }
       
@@ -457,27 +540,27 @@ void dualMotionControl(double valeurObjectifX, double valeurObjectifY, double of
     if(doneY == false){
       if(dir_state_y == false){
         
-        Serial.print(valeurRLS_Y);
-        Serial.print(" > ");
-        Serial.println(valeurObjectifY);
+        //Serial.print(valeurRLS_Y);
+        //Serial.print(" > ");
+        //Serial.println(valeurObjectifY);
         
         
         if(valeurRLS_Y >= valeurObjectifY){
           doneY = true;
-          Serial.println("doneY");
+          //Serial.println("doneY");
         }
       }
       if(dir_state_y == true){
       
         
-        Serial.print(valeurRLS_Y);
-        Serial.print(" < ");
-        Serial.println(valeurObjectifY);
+        //Serial.print(valeurRLS_Y);
+        //Serial.print(" < ");
+        //Serial.println(valeurObjectifY);
         
         
         if(valeurRLS_Y <= valeurObjectifY){
           doneY = true;
-          Serial.println("doneY");
+          //Serial.println("doneY");
         }
       }
       
