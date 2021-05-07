@@ -5,19 +5,21 @@
 #define PIN_STEP_2 A6
 #define PIN_DIR_2 A7
 
+/*
 #define T_OFF_1 300
 #define T_ON_1 200
 
 #define T_OFF_2 300
 #define T_ON_2 200
+*/
 
 #define PIN_button_start_1 3
 #define PIN_button_end_1 2
 #define PIN_button_start_2 14
 #define PIN_button_end_2 15
 
-#define chipSelectPin1 4
-#define chipSelectPin2 5
+#define chipSelectPin1 5
+#define chipSelectPin2 4
 
 
 long previousMicros = 0;
@@ -31,6 +33,17 @@ double offset2 = 0;
 double maxLength1 = 0;
 double maxLength2 = 0; 
 
+int T_OFF_1_ABS = 300;
+int T_ON_1_ABS = 200;
+
+int T_OFF_2_ABS = 300;
+int T_ON_2_ABS = 200;
+
+int T_OFF_1_REL = 100;
+int T_ON_1_REL = 100;
+
+int T_OFF_2_REL = 100;
+int T_ON_2_REL = 100;
 
 #define MAX_BUF 128
 
@@ -95,7 +108,7 @@ void help() {
   Serial.println(F("MA2 X[(target in um 6 digits)] Y[(target in um 6 digits)] - double linear absolute move"));
   Serial.println(F("MR1 X+ [(steps)] - single postif linear relatif X move"));
   Serial.println(F("MR1 Y- [(steps)] - single negatif linear relatif Y move"));
-  Serial.println(F("MR2 X[(steps)] Y[(steps)] - double linear relatif move"));
+  Serial.println(F("MR2 X- [(steps)] Y+[(steps)] - double linear relatif move"));
   Serial.println("");
   
   Serial.println("Position :");
@@ -104,13 +117,25 @@ void help() {
   Serial.println(F("GCP1 Y - get current position Y"));
   Serial.println(F("GCP2 X Y - get current position X and Y"));
   Serial.println("");
+
+  Serial.println("Setting :");
+  Serial.println("----------");
+  Serial.println(F("SCTA [numéro de l'axe] ON [time in micro-second on 4 digits ] - set current time absolute mouvement ON"));
+  Serial.println(F("SCTA [numéro de l'axe] OFF [time in micro-second on 4 digits ] - set current time absolute mouvement OFF"));
+  Serial.println(F("SCTR [numéro de l'axe] ON [time in micro-second on 4 digits ] - set current time relative mouvement ON"));
+  Serial.println(F("SCTR [numéro de l'axe] OFF [time in micro-second on 4 digits ] - set current time relative mouvement OFF"));
+  
+  Serial.println(F("GCTA [numéro de l'axe] - get current time absolute mouvement"));
+  Serial.println(F("GCTR [numéro de l'axe] - get current time relative mouvement"));
+  Serial.println("");
+  
+  
 }
 
 void ready(){
   index_buffer = 0;
   Serial.println(F("> "));
 }
-
 
 void loop() {
   if(Serial.available()){
@@ -138,6 +163,8 @@ void processCommand(){
   double valeurObjectif_Y = 0;
   int nbPasX_Objectif = 0;
   int nbPasY_Objectif = 0;
+  bool x_dir = false;
+  bool y_dir = false;
   
   if(buffer_String.substring(0,2) == "MA")
   {
@@ -192,6 +219,32 @@ void processCommand(){
         }
       }
     }
+    if(buffer_String.substring(2,3)=="2"){
+      //MR2 X- [(steps)] Y+[(steps)]
+      //MR2 X+ 00100 Y- 00100
+      if(buffer_String.substring(4,5)=="X"){
+        if(buffer_String.substring(5,6)=="+"){
+          x_dir = true;
+        }
+        if(buffer_String.substring(5,6)=="-"){
+          x_dir = false;
+        }
+        absolute_Value_String = buffer_String.substring(7,12);
+        nbPasX_Objectif = (absolute_Value_String.toInt());
+        
+        if(buffer_String.substring(13,14)=="Y"){
+          absolute_Value_String = buffer_String.substring(16,21);
+          nbPasY_Objectif = (absolute_Value_String.toInt());
+          if(buffer_String.substring(14,15)=="+"){
+            y_dir = true;
+          }
+          if(buffer_String.substring(14,15)=="-"){
+            y_dir = false;
+          }
+          xy_move(nbPasX_Objectif,x_dir,nbPasY_Objectif,y_dir);
+        }
+      }
+    }
   }
 
   if(buffer_String.substring(0,3) == "GCP")
@@ -213,6 +266,93 @@ void processCommand(){
       Serial.println(lectureCapteurRLS(chipSelectPin2)-offset2);
     }
   }
+
+  if(buffer_String.substring(0,4) == "SCTA")
+  { 
+    if(buffer_String.substring(5,6) == "1"){
+      if(buffer_String.substring(7,9) == "ON"){
+        T_ON_1_ABS = buffer_String.substring(10, 14).toInt();
+        Serial.print("T_ON_1_ABS = ");
+        Serial.println(T_ON_1_ABS);
+      }
+      if(buffer_String.substring(7,9) == "OFF"){
+        T_OFF_1_ABS = buffer_String.substring(10, 14).toInt();
+        Serial.print("T_OFF_1_ABS = ");
+        Serial.println(T_OFF_1_ABS);
+      }
+    }
+    if(buffer_String.substring(5,6) == "2"){
+      if(buffer_String.substring(7,9) == "ON"){
+        T_ON_2_ABS = buffer_String.substring(10, 14).toInt();
+        Serial.print("T_ON_2_ABS = ");
+        Serial.println(T_ON_2_ABS);
+      }
+      if(buffer_String.substring(7,9) == "OFF"){
+        T_OFF_2_ABS = buffer_String.substring(10, 14).toInt();
+        Serial.print("T_OFF_2_ABS = ");
+        Serial.println(T_OFF_2_ABS);
+      }
+    }
+  }
+  if(buffer_String.substring(0,4) == "SCTR")
+  { 
+    if(buffer_String.substring(5,6) == "1"){
+      if(buffer_String.substring(7,9) == "ON"){
+        T_ON_1_REL = buffer_String.substring(10, 14).toInt();
+        Serial.print("T_ON_1 = ");
+        Serial.println(T_ON_1_REL);
+      }
+      if(buffer_String.substring(7,9) == "OFF"){
+        T_OFF_1_REL = buffer_String.substring(10, 14).toInt();
+        Serial.print("T_OFF_1 = ");
+        Serial.println(T_OFF_1_REL);
+      }
+    }
+    if(buffer_String.substring(5,6) == "2"){
+      if(buffer_String.substring(7,9) == "ON"){
+        T_ON_2_REL = buffer_String.substring(10, 14).toInt();
+        Serial.print("T_ON_2 = ");
+        Serial.println(T_ON_2_REL);
+      }
+      if(buffer_String.substring(7,9) == "OFF"){
+        T_OFF_2_REL = buffer_String.substring(10, 14).toInt();
+        Serial.print("T_OFF_2 = ");
+        Serial.println(T_OFF_2_REL);
+      }
+    }
+  }
+
+  if(buffer_String.substring(0,4) == "GCTA")
+  {
+    if(buffer_String.substring(5,6) == "1"){
+      Serial.print("T_OFF_1 = ");
+      Serial.println(T_ON_1_ABS);
+      Serial.print("T_OFF_1 = ");
+      Serial.println(T_OFF_1_ABS);
+    }
+    if(buffer_String.substring(5,6) == "2"){
+      Serial.print("T_OFF_2 = ");
+      Serial.println(T_OFF_2_ABS);
+      Serial.print("T_OFF_2 = ");
+      Serial.println(T_OFF_2_ABS);
+    }
+  }
+  if(buffer_String.substring(0,4) == "GCTR")
+  {
+     if(buffer_String.substring(5,6) == "1"){
+      Serial.print("T_OFF_1 = ");
+      Serial.println(T_OFF_1_REL);
+      Serial.print("T_ON_1 = ");
+      Serial.println(T_ON_1_REL);
+    }
+    if(buffer_String.substring(5,6) == "2"){
+      Serial.print("T_OFF_2 = ");
+      Serial.println(T_OFF_2_REL);
+      Serial.print("T_ON_2 = ");
+      Serial.println(T_ON_2_REL);
+    }
+  }
+  
 }
 void processCommand2(){
   String buffer_String = buffer;
@@ -354,7 +494,7 @@ void xy_move(int nbPas1, bool dir1, int nbPas2, bool dir2){
       //Serial.print("A");
       if(step_state1 == LOW){
         //Serial.println("L");
-        if((currentMicros - previousMicros1)>=T_OFF_1)
+        if((currentMicros - previousMicros1)>=T_OFF_1_REL)
         {
           step_state1 = HIGH;
           nbPasFait1--;
@@ -363,7 +503,7 @@ void xy_move(int nbPas1, bool dir1, int nbPas2, bool dir2){
       }
       else{
         //Serial.println("H");
-        if((currentMicros - previousMicros1)>=T_ON_1)
+        if((currentMicros - previousMicros1)>=T_ON_1_REL)
         {
           step_state1 = LOW;
           previousMicros1 = currentMicros;
@@ -376,7 +516,7 @@ void xy_move(int nbPas1, bool dir1, int nbPas2, bool dir2){
       //Serial.print("B");
       if(step_state2 == LOW){
         //Serial.println("L");
-        if((currentMicros - previousMicros2)>=T_OFF_2)
+        if((currentMicros - previousMicros2)>=T_OFF_2_REL)
         {
           step_state2 = HIGH;
           nbPasFait2--;
@@ -385,7 +525,7 @@ void xy_move(int nbPas1, bool dir1, int nbPas2, bool dir2){
       }
       else{
         //Serial.println("H");
-        if((currentMicros - previousMicros2)>=T_ON_2)
+        if((currentMicros - previousMicros2)>=T_ON_2_REL)
         {
           step_state2 = LOW;
           previousMicros2 = currentMicros;
@@ -523,13 +663,13 @@ void dualMotionControl(double valeurObjectifX, double valeurObjectifY, double of
       }
       
       if(step_state_x == LOW){
-        if((currentMicros - previousMicros1)>=T_OFF_1){
+        if((currentMicros - previousMicros1)>=T_OFF_1_ABS){
           step_state_x = HIGH;
           digitalWrite(PIN_STEP_1, step_state_x);
         }
       }
       else{
-        if((currentMicros - previousMicros1)>=T_ON_1){
+        if((currentMicros - previousMicros1)>=T_ON_1_ABS){
           step_state_x = LOW;
           previousMicros1 = currentMicros;
           digitalWrite(PIN_STEP_1, step_state_x);
@@ -565,13 +705,13 @@ void dualMotionControl(double valeurObjectifX, double valeurObjectifY, double of
       }
       
       if(step_state_y == LOW){
-        if((currentMicros - previousMicros2)>=T_OFF_2){
+        if((currentMicros - previousMicros2)>=T_OFF_2_ABS){
           step_state_y = HIGH;
           digitalWrite(PIN_STEP_2, step_state_y);
         }
       }
       else{
-        if((currentMicros - previousMicros2)>=T_ON_2){
+        if((currentMicros - previousMicros2)>=T_ON_2_ABS){
           step_state_y = LOW;
           previousMicros2 = currentMicros;
           digitalWrite(PIN_STEP_2, step_state_y);
@@ -663,21 +803,23 @@ void dualMotionControl2(double valeurObjectifX, double valeurObjectifY, double o
         doneX = true;
         Serial.println("doneX B");
       }
+      
       if(doneX == false){
         if(step_state_x == LOW){
-          if((currentMicros - previousMicros1)>=T_OFF_1){
+          if((currentMicros - previousMicros1)>=T_OFF_1_ABS){
             step_state_x = HIGH;
             digitalWrite(PIN_STEP_1, step_state_x);
           }
         }
         else{
-          if((currentMicros - previousMicros1)>=T_ON_1){
+          if((currentMicros - previousMicros1)>=T_ON_1_ABS){
             step_state_x = LOW;
             previousMicros1 = currentMicros;
             digitalWrite(PIN_STEP_1, step_state_x);
           }
         }
       }
+      
     }
     //doneY = true;
     
@@ -705,13 +847,13 @@ void dualMotionControl2(double valeurObjectifX, double valeurObjectifY, double o
       
       if(doneY==false){
         if(step_state_y == LOW){
-          if((currentMicros - previousMicros2)>=T_OFF_2){
+          if((currentMicros - previousMicros2)>=T_OFF_2_ABS){
             step_state_y = HIGH;
             digitalWrite(PIN_STEP_2, step_state_y);
           }
         }
         else{
-          if((currentMicros - previousMicros2)>=T_ON_2){
+          if((currentMicros - previousMicros2)>=T_ON_2_ABS){
             step_state_y = LOW;
             previousMicros2 = currentMicros;
             digitalWrite(PIN_STEP_2, step_state_y);
@@ -830,7 +972,7 @@ void goMaxTouchSensor(){
       //Serial.print("A");
       if(state_step_1 == LOW){
         //Serial.println("L");
-        if((currentMicros - previousMicros1)>=T_OFF_1)
+        if((currentMicros - previousMicros1)>=T_OFF_1_REL)
         {
           //Serial.println((currentMicros - previousMicros1));
           state_step_1 = HIGH;
@@ -839,7 +981,7 @@ void goMaxTouchSensor(){
       }
       else{
        //Serial.println("H");
-        if((currentMicros - previousMicros1)>=T_ON_1)
+        if((currentMicros - previousMicros1)>=T_ON_1_REL)
         {
           state_step_1 = LOW;
           previousMicros1 = currentMicros;
@@ -871,7 +1013,7 @@ void goMaxTouchSensor(){
       //Serial.print("B");
       if(state_step_2 == LOW){
         //Serial.println("L");
-        if((currentMicros - previousMicros2)>=T_OFF_2)
+        if((currentMicros - previousMicros2)>=T_OFF_2_REL)
         {
           state_step_2 = HIGH;
           digitalWrite(PIN_STEP_2, state_step_2);
@@ -879,7 +1021,7 @@ void goMaxTouchSensor(){
       }
       else{
         //Serial.println("H");
-        if((currentMicros - previousMicros2)>=T_ON_2)
+        if((currentMicros - previousMicros2)>=T_ON_2_REL)
         {
           state_step_2 = LOW;
           previousMicros2 = currentMicros;
@@ -962,7 +1104,7 @@ void goZeroTouchSensor(){
       //Serial.print("A");
       if(state_step_1 == LOW){
         //Serial.println("L");
-        if((currentMicros - previousMicros1)>=T_OFF_1)
+        if((currentMicros - previousMicros1)>=T_OFF_1_REL)
         {
           //Serial.print("currentMicros - previousMicros1 = ");
           //Serial.println((currentMicros - previousMicros1));
@@ -972,7 +1114,7 @@ void goZeroTouchSensor(){
       }
       else{
         //Serial.println("H");
-        if((currentMicros - previousMicros1)>=T_ON_1)
+        if((currentMicros - previousMicros1)>=T_ON_1_REL)
         {
           state_step_1 = LOW;
           previousMicros1 = currentMicros;
@@ -1008,7 +1150,7 @@ void goZeroTouchSensor(){
       //Serial.print("B");
       if(state_step_2 == LOW){
         //Serial.println("L");
-        if((currentMicros - previousMicros2)>=T_OFF_2)
+        if((currentMicros - previousMicros2)>=T_OFF_2_REL)
         {
           //Serial.print("currentMicros - previousMicros2 = ");
           //Serial.println((currentMicros - previousMicros2));
@@ -1018,7 +1160,7 @@ void goZeroTouchSensor(){
       }
       else{
         //Serial.println("H");
-        if((currentMicros - previousMicros2)>=T_ON_2)
+        if((currentMicros - previousMicros2)>=T_ON_2_REL)
         {
           state_step_2 = LOW;
           previousMicros2 = currentMicros;
