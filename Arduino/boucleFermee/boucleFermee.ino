@@ -37,13 +37,12 @@ void setup() {
   offset1 = 6001738.50;
   offset2 = 5745582.50;
 
-  BF(40000, 0.005, chipSelectPin1, offset1,100,100);
 
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  
+  BF(40000, 0.005, chipSelectPin1, offset1,100,100);
+  BF(80000, 0.005, chipSelectPin1, offset1,100,100); 
 }
 void BF(double consigne, float k, char chipSelect, double offset, int timeON_min, int timeOFF_min){
 

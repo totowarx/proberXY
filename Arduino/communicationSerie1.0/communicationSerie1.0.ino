@@ -39,11 +39,11 @@ int T_ON_1_ABS = 200;
 int T_OFF_2_ABS = 300;
 int T_ON_2_ABS = 200;
 
-int T_OFF_1_REL = 100;
-int T_ON_1_REL = 100;
+int T_OFF_1_REL = 15;
+int T_ON_1_REL = 15;
 
-int T_OFF_2_REL = 100;
-int T_ON_2_REL = 100;
+int T_OFF_2_REL = 15;
+int T_ON_2_REL = 15;
 
 #define MAX_BUF 128
 
@@ -83,10 +83,10 @@ void setup() {
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE1);
   
-  //goZeroTouchSensor();
-  //goMaxTouchSensor();
-  offset1 = 6001738.50;
-  offset2 = 5745582.50;
+  goZeroTouchSensor();
+  goMaxTouchSensor();
+  //offset1 = 6001738.50;
+  //offset2 = 5745582.50;
 
   //help();
   ready();
@@ -1072,10 +1072,30 @@ void goZeroTouchSensor(){
   
   while(continue1 || continue2)
   { 
+    /*
+    Serial.print("continue 1 = ");
+    Serial.print(continue1);
+    Serial.print("continue 2 = ");
+    Serial.println(continue2);
+    */
+    
     state_button_START_1 = digitalRead(PIN_button_start_1);
     state_button_END_1 = digitalRead(PIN_button_end_1);
     state_button_START_2 = digitalRead(PIN_button_start_2);
     state_button_END_2 = digitalRead(PIN_button_end_2); 
+
+    /*
+    //Dans un état normal tout doit être à 0
+    Serial.print("state_button_START_1 = ");
+    Serial.println(state_button_START_1);
+    Serial.print("state_button_END_1 = ");
+    Serial.println(state_button_END_1);
+    Serial.print("state_button_START_2 = ");
+    Serial.println(state_button_START_2);
+    Serial.print("state_button_END_2 = ");
+    Serial.println(state_button_END_2);
+    Serial.println();
+    */
     
     currentMicros = micros();
     

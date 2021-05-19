@@ -14,18 +14,18 @@ void loop() {
   //On fixe la direction
 
   digitalWrite(PIN_DIR_1, LOW);
-  for(int x=0; x<10000;x++){
+  for(int x=0; x<20000;x++){
     digitalWrite(PIN_STEP_1, HIGH);
-    delayMicroseconds(300);
+    delayMicroseconds(8);
     digitalWrite(PIN_STEP_1, LOW);
-    delayMicroseconds(100);
+    delayMicroseconds(8);
   }
   digitalWrite(PIN_DIR_1, HIGH);
-  for(int x=0; x<10000;x++){
+  for(int x=0; x<20000;x++){
     digitalWrite(PIN_STEP_1, HIGH);
-    delayMicroseconds(300);
+    delayMicroseconds(8);
     digitalWrite(PIN_STEP_1, LOW);
-    delayMicroseconds(100);
+    delayMicroseconds(8);
   }
   //a(5000);
   delay(2000);
