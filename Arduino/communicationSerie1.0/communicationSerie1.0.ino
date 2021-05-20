@@ -1056,16 +1056,16 @@ void goZeroTouchSensor(){
   state_button_END_2 = digitalRead(PIN_button_end_2);
 
   if((state_button_END_1==HIGH) && (state_button_END_2==HIGH)){
-      xy_move(2000,false,2000,false);
+      xy_move(2000,false,8000,false);
       Serial.println("Cas 1");
   }
   else{
     if(state_button_END_1==HIGH){
-      xy_move(2000,false,0,false);
+      xy_move(8000,false,0,false);
       Serial.println("Cas 2");
     }
     if(state_button_END_2==HIGH){
-      xy_move(0,false,2000,false);
+      xy_move(0,false,8000,false);
       Serial.println("Cas 3");
     }  
   }
@@ -1100,8 +1100,8 @@ void goZeroTouchSensor(){
     currentMicros = micros();
     
     if(continue1 == true){
-      if((state_button_START_1 == HIGH) || (state_button_END_1 == HIGH)){
-        if(state_button_START_1 == HIGH){
+      if((state_button_START_1 == HIGH) || (state_button_END_1 == HIGH)){ //Si le capteur de début ou de fin est appuyé
+        if(state_button_START_1 == HIGH){ // Si le capteur de début est appuyé
           continue1 = false;
           //lire la position sur la règle est défini comme offset 1
           maxLength1 = lectureCapteurRLS(chipSelectPin1);
