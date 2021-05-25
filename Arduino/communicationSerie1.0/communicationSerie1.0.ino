@@ -83,10 +83,10 @@ void setup() {
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE1);
   
-  goZeroTouchSensor();
-  goMaxTouchSensor();
-  //offset1 = 6001738.50;
-  //offset2 = 5745582.50;
+  //goZeroTouchSensor();
+  //goMaxTouchSensor();
+  offset1 = 6001738.50;
+  offset2 = 5745582.50;
 
   //help();
   ready();
@@ -172,13 +172,15 @@ void processCommand(){
       if(buffer_String.substring(4,5)=="X"){
         absolute_Value_String = buffer_String.substring(5,11);
         valeurObjectif_X = (absolute_Value_String.toInt());
-        motionControl(valeurObjectif_X, offset1, chipSelectPin1, PIN_STEP_1, PIN_DIR_1);
+        //motionControl(valeurObjectif_X, offset1, chipSelectPin1, PIN_STEP_1, PIN_DIR_1);
+        PID(valeurObjectif_X, chipSelectPin1, offset1, PIN_DIR_1, PIN_STEP_1);
       }
       if(buffer_String.substring(4,5)=="Y"){
         Serial.println("Y:");
         absolute_Value_String = buffer_String.substring(5,11);
         valeurObjectif_Y = (absolute_Value_String.toInt());
-        motionControl(valeurObjectif_Y, offset2, chipSelectPin2, PIN_STEP_2, PIN_DIR_2);
+        //motionControl(valeurObjectif_Y, offset2, chipSelectPin2, PIN_STEP_2, PIN_DIR_2);
+        PID(valeurObjectif_Y, chipSelectPin2, offset2, PIN_DIR_2, PIN_STEP_2);
       }
     }
     if(buffer_String.substring(2,3)=="2"){
@@ -191,7 +193,8 @@ void processCommand(){
       valeurObjectif_Y = (absolute_Value_String.toInt());
       //Serial.println(valeurObjectif_Y);  
 
-      dualMotionControl(valeurObjectif_X, valeurObjectif_Y, offset1, offset2);
+      //dualMotionControl(valeurObjectif_X, valeurObjectif_Y, offset1, offset2);
+      PID_double(valeurObjectif_X, valeurObjectif_Y, chipSelectPin1, chipSelectPin2, offset1, offset2);
     }
   }
 
@@ -863,6 +866,319 @@ void dualMotionControl2(double valeurObjectifX, double valeurObjectifY, double o
     }
   } 
 }
+void PID_double(double consigne1, double consigne2, char chipSelect1, char chipSelect2, double offset1, double offset2)
+{
+  double erreur1 = 0;
+  double erreur2 = 0;
+
+  double erreur_precedente1 = 0;
+  double erreur_precedente2 = 0;
+
+  double cumul_erreur1 = 0;
+  double cumul_erreur2 = 0;
+
+  double variation_erreur1 = 0;
+  double variation_erreur2 = 0;
+
+  double valeurCapteur1 = 0;
+  double valeurCapteur2 = 0;
+
+  double commande1 = 0;
+  double commande2 = 0;
+
+  int tCommande1 = 0;
+  int tCommande2 = 0;
+
+  bool state_step1 = HIGH;
+  bool state_step2 = HIGH;
+
+  /*
+  double Kp = 15;
+  double Ki = 0.01;
+  double Kd = 0.5;
+  */
+  double Kp = 8;
+  double Ki = 0.008;
+  double Kd = 3;
+
+  bool stop1 = false;
+  bool stop2 = false;
+  bool stopImpact = false;
+
+  bool state_button_START_1 = LOW;
+  bool state_button_END_1 = LOW;
+  bool state_button_START_2 = LOW;
+  bool state_button_END_2 = LOW;
+
+  unsigned long currentMicros = micros();
+  unsigned long previousMicros1 = 0;
+  unsigned long previousMicros2 = 0;
+  unsigned long previousMicros3 = 0;
+
+  valeurCapteur1 = lectureCapteurRLS(chipSelect1)-offset1;
+  valeurCapteur2 = lectureCapteurRLS(chipSelect2)-offset2;
+
+  erreur1 = consigne1 - valeurCapteur1;
+  erreur2 = consigne2 - valeurCapteur2;
+
+  Serial.println("PID_double");
+  Serial.println(erreur1);
+  Serial.println(erreur2);
+
+  while((stop1 != true) || (stop2 != true)){
+    /*
+    Serial.print("stop1 = ");
+    Serial.print(stop1);
+    Serial.print("    stop2 = ");
+    Serial.println(stop2);
+    */
+    currentMicros = micros();
+    
+    if(stopImpact==true){
+      stop1 = true;
+      stop2 = true;
+    }
+    else
+    {
+      
+      if((currentMicros - previousMicros1)>3000)
+      {
+        state_button_START_1 = digitalRead(PIN_button_start_1);
+        state_button_END_1 = digitalRead(PIN_button_end_1);
+        state_button_START_2 = digitalRead(PIN_button_start_2);
+        state_button_END_2 = digitalRead(PIN_button_end_2); 
+      
+        stopImpact = state_button_START_1||state_button_START_2||state_button_END_1||state_button_END_2;
+        if(stop1==false)
+        {
+          valeurCapteur1 = lectureCapteurRLS(chipSelect1)-offset1;
+          erreur1 = consigne1 - valeurCapteur1;
+          if(erreur1>0){
+            digitalWrite(PIN_DIR_1, LOW);
+         }
+         else{
+            digitalWrite(PIN_DIR_1, HIGH);
+            erreur1 = -erreur1;
+         }
+
+         if(erreur1<=0){
+          stop1=true;
+         }
+         
+         cumul_erreur1 = cumul_erreur1 + erreur1;
+         variation_erreur1 = erreur1 - erreur_precedente1;
+         erreur_precedente1 = erreur1;
+  
+         if(cumul_erreur1>25000){
+          cumul_erreur1 = 25000;
+         }
+         if(erreur1>10000){
+          tCommande1 = 10;
+         }
+         else{
+          commande1 = (Kp*erreur1)+(Ki*cumul_erreur1)+(Kd*variation_erreur1);
+          if(commande1 > 100000){commande1=100000;}
+          if(commande1 < 200){commande1=200;}
+          tCommande1 = (1000000/commande1);
+         }
+         
+        }
+        if(stop2==false)
+        {
+          valeurCapteur2 = lectureCapteurRLS(chipSelect2)-offset2;
+          erreur2 = consigne2 - valeurCapteur2;
+          if(erreur2>0){
+              digitalWrite(PIN_DIR_2, LOW);
+           }
+           else{
+              digitalWrite(PIN_DIR_2, HIGH);
+              erreur2 = -erreur2;
+           }
+
+           if(erreur2<=0){
+            stop2=true;
+           }
+
+           cumul_erreur2 = cumul_erreur2 + erreur2;
+           variation_erreur2 = erreur2 - erreur_precedente2;
+           erreur_precedente2 = erreur2;
+    
+           if(cumul_erreur2>25000){
+            cumul_erreur2 = 25000;
+           }
+           if(erreur2>10000){
+            tCommande2 = 10;
+           }
+           else{
+            commande2 = (Kp*erreur2)+(Ki*cumul_erreur2)+(Kd*variation_erreur2);
+            if(commande2 > 100000){commande2=100000;}
+            if(commande2 < 200){commande2=200;}
+            tCommande2 = (1000000/commande2);
+           }
+        }
+        previousMicros1 = micros();
+      }
+      if((currentMicros - previousMicros2)>tCommande1)
+      {
+        if(stop1!=true){
+          if(state_step1 == HIGH){state_step1=LOW;}
+          else{state_step1=HIGH;}
+      
+          digitalWrite(PIN_STEP_1, state_step1);
+          previousMicros2 = micros();
+        }
+      }
+      
+      if((currentMicros - previousMicros3)>tCommande2)
+      {
+        if(stop2!=true){
+          if(state_step2 == HIGH){state_step2=LOW;}
+          else{state_step2=HIGH;}
+      
+          digitalWrite(PIN_STEP_2, state_step2);
+          previousMicros3 = micros();
+        }
+      }
+    }
+  }
+  if(stopImpact==true)
+  {
+    Serial.println("Capteur fin de course appuyé");
+  }
+  valeurCapteur1 = lectureCapteurRLS(chipSelect1)-offset1;
+  Serial.println(valeurCapteur1);
+  valeurCapteur2 = lectureCapteurRLS(chipSelect2)-offset2;
+  Serial.println(valeurCapteur2);
+}
+
+void PID(double consigne, char chipSelect, double offset, char pin_dir, char pin_step){
+  
+  double erreur = 0;
+  double erreur_precedente = 0;
+  double cumul_erreur = 0;
+  double variation_erreur = 0;
+
+  double valeurCapteur = 0;
+
+  bool state_step = HIGH;
+
+  double commande=0;
+  int tCommande = 0;
+
+  double Kp = 8;
+  double Ki = 0.3;
+  double Kd = 1;
+
+  bool stop = false;
+  bool stopImpact = false;
+
+  bool state_button_START_1 = LOW;
+  bool state_button_END_1 = LOW;
+  bool state_button_START_2 = LOW;
+  bool state_button_END_2 = LOW;
+
+  unsigned long currentMicros = micros();
+  unsigned long previousMicros1 = 0;
+  unsigned long previousMicros3 = 0;
+    
+  Serial.println("PID");
+  valeurCapteur = lectureCapteurRLS(chipSelect)-offset;
+  erreur = consigne - valeurCapteur;
+  Serial.print("erreur =");
+  Serial.println(erreur);
+
+  //Dans le cas ou l'on veut afficher la valeur sur l'IHM on va afficher la valeur que si elle est différente de celle d'avant et l'on fera un taux de rafraichissement plus faible
+  //Dans le cas ou l'on veut faire de la carac on affichera toute les valeurs pour bien montrer l'aspect temporelle.
+  
+  while(stop!=true){
+    currentMicros = micros();
+    if(stopImpact==true){
+      stop = true;
+    }
+    else
+    {
+      if((currentMicros - previousMicros3)>3000) // On fait un relevé de position toute les 3000 microsecondes
+      {
+         valeurCapteur = lectureCapteurRLS(chipSelect)-offset;
+         //Serial.println(valeurCapteur);
+  
+         erreur = consigne - valeurCapteur;
+         
+         if(erreur>0){
+            digitalWrite(PIN_DIR_1, LOW);
+         }
+         else{
+            digitalWrite(PIN_DIR_1, HIGH);
+            erreur = -erreur;
+         }
+         
+         if(erreur<=0){
+          stop=true;
+         }
+         
+         cumul_erreur = cumul_erreur + erreur;
+         variation_erreur = erreur - erreur_precedente;
+         erreur_precedente = erreur;
+  
+         if(cumul_erreur>25000){
+          cumul_erreur = 25000;
+         }
+         
+         if(erreur>10000){
+          tCommande = 10;
+         }
+         else{
+          commande = (Kp*erreur)+(Ki*cumul_erreur)+(Kd*variation_erreur);
+          if(commande > 100000){commande=100000;}
+          if(commande < 200){commande=200;}
+          tCommande = (1000000/commande);
+         }
+  
+         /*
+         Serial.print("erreur =");
+         Serial.print(erreur);
+  
+         Serial.print("     cumul_erreur =");
+         Serial.print(cumul_erreur);
+  
+         Serial.print("     variation_erreur =");
+         Serial.print(variation_erreur);
+  
+         Serial.print("     commande =");
+         Serial.print(commande);
+  
+         Serial.print("     tCommmande =");
+         Serial.println(tCommande);
+          */
+        
+         state_button_START_1 = digitalRead(PIN_button_start_1);
+         state_button_END_1 = digitalRead(PIN_button_end_1);
+         state_button_START_2 = digitalRead(PIN_button_start_2);
+         state_button_END_2 = digitalRead(PIN_button_end_2); 
+  
+         stopImpact = state_button_START_1||state_button_START_2||state_button_END_1||state_button_END_2;
+         
+         previousMicros3 = micros();
+      }
+      if((currentMicros - previousMicros1)>tCommande)
+      {
+        if(state_step == HIGH){state_step=LOW;}
+        else{state_step=HIGH;}
+  
+        digitalWrite(PIN_STEP_1, state_step);
+        previousMicros1 = micros();
+      }
+    }
+  }
+
+  if(stopImpact==true)
+  {
+    Serial.println("Capteur fin de course appuyé");
+  }
+  valeurCapteur = lectureCapteurRLS(chipSelect)-offset;
+  Serial.println(valeurCapteur);
+}
+
 double lectureCapteurRLS(char cs_Pin){
   //uint8_t CRC;
   //uint8_t DetailedStatus;
