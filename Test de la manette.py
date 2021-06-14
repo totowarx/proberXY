@@ -14,31 +14,37 @@ def showIf(boolean, ifTrue, ifFalse=" "):
         show(ifFalse)
 joy = xbox.Joystick()
 # Boutons 
-print("Test manette: appuyez sur Back pour quitter")
+print("Appuyez sur Back pour quitter")
 while not joy.Back():
     show("Connecté!!!")
     showIf(joy.connected(), "Y", "N")
-    # Right analog stick
-    show("  Right X/Y:", fmtFloat(joy.rightX()), "/", fmtFloat(joy.rightY()))
-    # Left analog stick
-    #show("  Left X/Y:", fmtFloat(joy.leftX()), "/", fmtFloat(joy.leftY()))
-    # Right trigger
-    show("  RightTrg:", fmtFloat(joy.rightTrigger()))
-    # Left trigger
-    #show("  LeftTrg:", fmtFloat(joy.leftTrigger()))
-    # A/B/X/Y buttons
-    show("  Buttons:")
+    # Joystick droit
+    show("  Joystick droit:", fmtFloat(joy.rightX()), "/", fmtFloat(joy.rightY()))
+    # Joystick gauche
+    show("  Joystick gauche:", fmtFloat(joy.leftX()), "/", fmtFloat(joy.leftY()))
+    # Gachette droite
+    show("  Gachette droite:", fmtFloat(joy.rightTrigger()))
+    # Gauchette gauche 
+    show("  Gauchette gauche:", fmtFloat(joy.leftTrigger()))
+    # A/B/X/Y
+    show("  Boutons:")
     showIf(joy.A(), "A")
     showIf(joy.B(), "B")
     showIf(joy.X(), "X")
     showIf(joy.Y(), "Y")
     # Dpad U/D/L/R
-    show("  Dpad:")
+    show("  Croix directionnel:")
     showIf(joy.dpadUp(),    "U")
     showIf(joy.dpadDown(),  "D")
     showIf(joy.dpadLeft(),  "L")
     showIf(joy.dpadRight(), "R")
-    # Curseur en début de ligne
+    # Bumper gauche
+    show("  Bumper gauche:")
+    showIf(joy.leftBumper(), "LB")
+    # Bumper gauche
+    show("  Bumper droit:")
+    showIf(joy.rightBumper(), "RB")
+    # Curseur en debut de ligne : affichage unique
     show(chr(13))
 # Fin
 joy.close()
