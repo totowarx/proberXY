@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Une page web avec Python et HTML !</title>
+
+    <style>
+        .palette {
+        --g:5px; /* The gap between shapes*/
+        --s:10px; /* the size*/
+
+        height: 200px;
+        width: 200px;
+        position:relative;
+        display:inline-block;
+        overflow:hidden;
+        }
+        .palette:before,
+        .palette:after{
+        content:"";
+        position:absolute;
+        top:0;
+        left:0;
+        right:0;
+        bottom:0;
+        border:var(--s) solid var(--c,blue);
+        border-radius:50%;
+        clip-path:polygon(
+            calc(50% + var(--g)/2) 50%, 
+            calc(50% + var(--g)/2) 0%, 
+            100% 0%,
+            100% calc(33.745% - var(--g)/2),
+            50% calc(50% - var(--g)/2)); 
+        }
+        /*
+        .palette:after {
+        clip-path:polygon(
+            calc(50% - var(--g)/2) 50%, 
+            calc(50% - var(--g)/2) 0%, 
+            0% 0%,0% 100%,100% 100%,
+            100% calc(33.745% + var(--g)/2),
+            50% calc(50% + var(--g)/2)); 
+        --c:orange;
+        border-width:calc(var(--s)/2);  
+        top:calc(var(--s)/4);
+        left:calc(var(--s)/4);
+        right:calc(var(--s)/4);
+        bottom:calc(var(--s)/4);
+        }
+        */
+        body {
+        background:#f2f2f2;
+        }
+
+        .rond{
+            height: 200px;
+            width: 200px;
+            position: relative;
+            display: inline-block;
+            overflow: hidden;
+        }
+
+        .rond:before,
+        .rond:after{
+            content:"";
+            position:absolute;
+            top:0;
+            left:0;
+            right:0;
+            bottom:0;
+            border: 10px solid var(--c,blue);
+            border-radius:50%;
+            clip-path:polygon(
+                50% 50%, 
+                50% 0%, 
+                100% 0%,
+                100% 33.745%,
+                50% 50% ); 
+            }
+    </style>
+
+</head>
+
+<body>
+    <h1> Déplacement instantané XY </h1>
+
+    <div class="palette">
+    </div>
+    
+    <div class="palette" style="--s:40px;--g:20px;transform:rotate(45deg)">
+    </div>
+    
+    <div class="palette" style="--s:8px;--g:10px;transform:rotate(90deg)">
+    </div>
+
+    <div class="rond1">
+
+    </div>
+</body>
+
+</html>

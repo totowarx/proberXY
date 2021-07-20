@@ -21,6 +21,8 @@
 #define chipSelectPin1 5
 #define chipSelectPin2 4
 
+#define PIN_lightCamera 8
+
 
 long previousMicros = 0;
 
@@ -71,6 +73,11 @@ void setup() {
   pinMode(A2,OUTPUT);
   digitalWrite(A2,LOW);
 
+  // Sortie anneau de lumière
+  pinMode(PIN_lightCamera, OUTPUT);
+
+  digitalWrite(PIN_lightCamera,LOW);
+
   // Initialisation de la communication série  à 250000 bits / seconde
   Serial.begin(250000);
 
@@ -81,7 +88,7 @@ void setup() {
   SPI.setDataMode(SPI_MODE1);
   
   //goZeroTouchSensor();
-  //goMaxTouchSensor();
+  goMaxTouchSensor();
   
   offset1 = 6001738.50;
   offset2 = 5745582.50;
@@ -125,6 +132,10 @@ void help() {
   
   Serial.println(F("GCTA [numéro de l'axe] - get current time absolute mouvement"));
   Serial.println(F("GCTR [numéro de l'axe] - get current time relative mouvement"));
+  Serial.println("");
+
+  Serial.println(F("LED ON - start the light of the camera"));
+  Serial.println(F("LED OFF - stop the light of the camera"));
   Serial.println("");
   
   
@@ -353,9 +364,30 @@ void processCommand(){
       Serial.println(T_ON_2_REL);
     }
   }
+
+  if(buffer_String.substring(0,4) == "CAL1")
+  {
+    goZeroTouchSensor();
+    goMaxTouchSensor();
+  }
+
+  if(buffer_String.substring(0,3) == "LED"){
+    if(buffer_String.substring(4,6) == "ON"){
+      allumeLED();
+    }
+    if(buffer_String.substring(4,7) == "OFF"){
+      eteindreLED();
+    }
+  }
   
 }
 
+void allumeLED(){
+  digitalWrite(PIN_lightCamera,HIGH);
+}
+void eteindreLED(){
+  digitalWrite(PIN_lightCamera,LOW);
+}
 void xy_move(int nbPas1, bool dir1, int nbPas2, bool dir2){
   int step_state1 = LOW;
   int step_state2 = LOW;
@@ -463,6 +495,7 @@ void xy_move_cfdc(int nbPas1, bool dir1, int nbPas2, bool dir2){
   bool state_button_END_2 = LOW;
 
   double valeurCapteur1 = 0;
+  double valeurCapteur2 = 0;
 
   if(dir1==true){
     digitalWrite(PIN_DIR_1,HIGH);
@@ -551,9 +584,15 @@ void xy_move_cfdc(int nbPas1, bool dir1, int nbPas2, bool dir2){
       }
     }
   }
-  
-  valeurCapteur1 = lectureCapteurRLS(chipSelectPin1)-offset1;
-  Serial.println(valeurCapteur1);
+
+  if(nbPas1>0){
+    valeurCapteur1 = lectureCapteurRLS(chipSelectPin1)-offset1;
+    Serial.println(valeurCapteur1);
+  }
+  if(nbPas2>0){
+    valeurCapteur2 = lectureCapteurRLS(chipSelectPin2)-offset2;
+    Serial.println(valeurCapteur2);
+  }
   
   if(stopImpact==true)
   {
